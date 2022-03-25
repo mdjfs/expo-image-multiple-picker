@@ -27,6 +27,7 @@
     "!xcuserdata"
   ],
   "scripts": {
+    "publish-minor": "npm version minor && npm run compile && npm publish",
     "compile": "tsc -p .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "prepare": "yarn compile",
