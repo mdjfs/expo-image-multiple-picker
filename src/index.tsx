@@ -373,9 +373,7 @@ class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
         imageSize={imageSize}
         checked={checked}
         onSelect={(params) => this.select(item.id, params)}
-        checkedComponent={
-          this.props.check !== undefined ? this.props.check() : undefined
-        }
+        checkedComponent={this.props.check ? this.props.check() : undefined}
       ></ImageBox>
     )
   }
@@ -594,6 +592,7 @@ export function ImagePicker(props: ImagePickerProps) {
             onSelect={setSelected}
             multiple={props.multiple}
             columns={props.galleryColumns}
+            check={props.theme?.check}
           />
         </View>
       )}
