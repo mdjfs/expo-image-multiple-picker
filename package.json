@@ -1,6 +1,6 @@
 {
   "name": "expo-image-multiple-picker",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Fully customizable image picker for react native",
   "homepage": "https://github.com/mdjfs/expo-image-multiple-picker#readme",
   "main": "lib/index.js",
