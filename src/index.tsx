@@ -66,9 +66,9 @@ export interface AlbumData {
 }
 
 export interface ImagePickerTheme {
-  header: (props: HeaderData) => JSX.Element
-  album: (props: AlbumData) => JSX.Element
-  check: () => JSX.Element
+  header?: (props: HeaderData) => JSX.Element
+  album?: (props: AlbumData) => JSX.Element
+  check?: () => JSX.Element
 }
 
 export interface ImagePickerProps {
@@ -529,8 +529,8 @@ export function ImagePicker(props: ImagePickerProps) {
   }, [status])
 
   useEffect(() => {
-    if (status && (!albumData || albumData.length == 0)) loadAlbumData()
-  }, [status])
+    if (!albumData || albumData.length == 0) loadAlbumData()
+  })
 
   useEffect(() => {
     if (selected.length == 0) {
