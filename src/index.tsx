@@ -1,12 +1,11 @@
 import * as MediaLibrary from 'expo-media-library';
-import React, { Component, useEffect, useState } from 'react';
+import React, { Component, PureComponent, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
   Dimensions,
   FlatList,
   Image,
-  ListRenderItemInfo,
   Pressable,
   StyleSheet,
   Text,
@@ -21,36 +20,44 @@ export type Asset = MediaLibrary.Asset
 export type Album = MediaLibrary.Album
 
 interface SelectedAsset {
-  setStatus: (status: boolean) => void
-  status: boolean
+  asset: Asset
+  uncheck: () => void
+}
+
+interface Size {
+  width: number
+  height: number
 }
 
 interface ImagePickerCarouselState {
   page?: Page
-  assets: Map<string, Asset>
   selectedAssets: Map<string, SelectedAsset>
-  recentFetched?: boolean
+  data: ImageBoxItem[]
 }
 
 interface ImagePickerCarouselProps {
-  columns?: number
+  columns: number
   multiple?: boolean
   onSelect?: (images: Asset[]) => void
   albumID?: string
   check?: () => JSX.Element
 }
 
+interface ImageBoxItem {
+  asset: Asset
+  size: Size
+  onCheck: (checked: boolean, asset: SelectedAsset) => void
+  isChecked: () => boolean
+  check?: () => JSX.Element
+}
+
 interface ImageBoxProps {
-  imageSize: { width: number; height: number }
-  uri: string
-  checked?: boolean
-  onSelect?: (params: SelectedAsset) => void
-  checkedComponent?: JSX.Element
+  item: ImageBoxItem
 }
 
 export interface HeaderData {
   view: Views
-  goToAlbum: () => void
+  goToAlbum?: () => void
   imagesPicked: number
   multiple: boolean
   picked: boolean
@@ -66,9 +73,9 @@ export interface AlbumData {
 }
 
 export interface ImagePickerTheme {
-  header?: (props: HeaderData) => JSX.Element
-  album?: (props: AlbumData) => JSX.Element
-  check?: () => JSX.Element
+  header: (props: HeaderData) => JSX.Element
+  album: (props: AlbumData) => JSX.Element
+  check: () => JSX.Element
 }
 
 export interface ImagePickerProps {
@@ -134,6 +141,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 80,
     padding: 20,
+    height: 130,
     justifyContent: 'space-between',
     flexDirection: 'row',
     backgroundColor: 'white',
@@ -155,31 +163,11 @@ const styles = StyleSheet.create({
   },
 })
 
-class ImageBox extends Component<ImageBoxProps> {
+class ImageBox extends PureComponent<ImageBoxProps> {
   _ismounted = false
 
   state = {
-    checked: this.props.checked || false,
-  }
-
-  sendSelect(status: boolean) {
-    this.setState(
-      {
-        checked: status,
-      },
-      () => {
-        if (this.props.onSelect) {
-          const cb = (checked: boolean) => {
-            if (this._ismounted) {
-              this.setState({
-                checked,
-              })
-            }
-          }
-          this.props.onSelect({ status: this.state.checked, setStatus: cb })
-        }
-      }
-    )
+    checked: this.props.item.isChecked() || false,
   }
 
   componentDidMount() {
@@ -190,16 +178,22 @@ class ImageBox extends Component<ImageBoxProps> {
     this._ismounted = false
   }
 
-  shouldComponentUpdate(_: ImageBoxProps, newState: { checked: boolean }) {
-    if (newState.checked != this.state.checked) {
-      return true
-    }
-    return false
+  toggle() {
+    const checked = !this.state.checked
+
+    this.setState({ checked })
+
+    this.props.item.onCheck(checked, {
+      uncheck: () => {
+        if (this._ismounted) this.setState({ checked: false })
+      },
+      asset: this.props.item.asset,
+    })
   }
 
   getCheckedComponent() {
     return (
-      this.props.checkedComponent || (
+      this.props.item.check || (
         <View style={styles.defaultCheckedBg}>
           <View style={styles.defaultCheckedContainer}>
             <Svg viewBox='0 0 512 512'>
@@ -217,20 +211,20 @@ class ImageBox extends Component<ImageBoxProps> {
   render() {
     return (
       <TouchableOpacity
-        onPress={() => this.sendSelect(!this.state.checked)}
+        onPress={this.toggle.bind(this)}
         style={{
           flex: 1,
-          width: this.props.imageSize.width,
-          height: this.props.imageSize.height,
+          width: this.props.item.size.width,
+          height: this.props.item.size.height,
         }}
       >
         <Image
           style={{
-            width: this.props.imageSize.width,
+            width: this.props.item.size.width,
             resizeMode: 'cover',
             flex: 1,
           }}
-          source={{ uri: this.props.uri }}
+          source={{ uri: this.props.item.asset.uri }}
         />
 
         <View
@@ -246,17 +240,16 @@ class ImageBox extends Component<ImageBoxProps> {
   }
 }
 
-class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
+export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   _unmounted = false
 
   state: ImagePickerCarouselState = {
-    assets: new Map(),
     selectedAssets: new Map(),
-    recentFetched: false,
+    data: [],
   }
 
   getColumns() {
-    return this.props.columns && this.props.columns > 0 ? this.props.columns : 2
+    return this.props.columns > 0 ? this.props.columns : 2
   }
 
   isMultiple() {
@@ -274,118 +267,94 @@ class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   getItemsPerScreen() {
     const columns = this.getColumns()
     const size = this.getImageSize()
-    return Math.floor((screen.height / size.height) * columns) + columns
+    return Math.ceil((screen.height / size.height) * columns)
   }
 
-  shouldComponentUpdate(
-    _: ImagePickerCarouselProps,
-    nextState: ImagePickerCarouselState
-  ) {
-    if (nextState.recentFetched) {
+  selectedImage(checked: boolean, selected: SelectedAsset) {
+    if (!this.props.multiple) {
+      for (const sel of this.state.selectedAssets.values()) {
+        sel.uncheck()
+      }
+      this.state.selectedAssets.clear()
+    }
+    if (checked) {
+      this.state.selectedAssets.set(selected.asset.id, selected)
+    } else {
+      this.state.selectedAssets.delete(selected.asset.id)
+    }
+    this.setState({
+      selectedAssets: this.state.selectedAssets,
+    })
+    if (this.props.onSelect) {
+      this.props.onSelect(
+        [...this.state.selectedAssets.values()].map((s) => s.asset)
+      )
+    }
+  }
+
+  exists(asset_id: string) {
+    return this.state.data.find((data) => data.asset.id === asset_id)
+  }
+
+  isChecked(asset_id: string) {
+    return this.state.selectedAssets.has(asset_id)
+  }
+
+  async fetchNextPage(stack: number): Promise<boolean> {
+    const page = await MediaLibrary.getAssetsAsync({
+      album: this.props.albumID,
+      first: stack,
+      sortBy: [MediaLibrary.SortBy.modificationTime],
+      after: this.state.page ? this.state.page.endCursor : '0',
+    })
+    const isLastPage = page.endCursor == this.state.page?.endCursor
+    if (!this._unmounted && !isLastPage) {
+      this.state.page = page
+      const size = this.getImageSize()
+      for (const asset of page.assets) {
+        if (!this.exists(asset.id)) {
+          this.state.data.push({
+            asset,
+            size,
+            isChecked: this.isChecked.bind(this, asset.id),
+            onCheck: this.selectedImage.bind(this),
+            check: this.props.check,
+          })
+        }
+      }
       this.setState({
-        recentFetched: false,
+        data: this.state.data,
+        page: this.state.page,
       })
       return true
     }
     return false
   }
 
-  async fetchNextPage(stack: number, cb?: () => void) {
-    const images = this.state.assets
-    const page = await MediaLibrary.getAssetsAsync({
-      album: this.props.albumID,
-      first: stack,
-      sortBy: [[MediaLibrary.SortBy.creationTime, false]],
-      after: this.state.page ? this.state.page.endCursor : '0',
-    })
-    for (const asset of page.assets) {
-      images.set(asset.id, asset)
-    }
-    if (!this._unmounted)
-      this.setState(
-        {
-          assets: images,
-          recentFetched: true,
-          page,
-        },
-        cb
-      )
-  }
-
-  fillStartImages() {
+  async fillStartImages() {
     const needFetch = this.getItemsPerScreen()
-    this.fetchNextPage(needFetch < 20 ? needFetch : 20, () => {
-      if (this.state.assets.size < needFetch) {
-        this.fillStartImages()
-      }
-    })
+    const fetched = await this.fetchNextPage(needFetch < 20 ? needFetch : 20)
+    if (fetched && this.state.data.length < needFetch)
+      await this.fillStartImages()
   }
 
-  componentDidMount() {
-    this.fillStartImages()
+  async componentDidMount() {
+    if (this.state.data.length == 0) await this.fillStartImages()
   }
 
   componentWillUnmount() {
     this._unmounted = true
   }
 
-  select(id: string, params: SelectedAsset) {
-    const selected = this.state.selectedAssets
-    if (params.status) {
-      if (!this.isMultiple()) {
-        for (const img of selected.values()) {
-          img.setStatus(false)
-        }
-        selected.clear()
-      }
-      selected.set(id, params)
-    } else {
-      selected.delete(id)
-    }
-    this.setState(
-      {
-        selectedAssets: selected,
-      },
-      () => {
-        if (this.props.onSelect) {
-          const items = new Map(this.state.assets)
-          for (const id of items.keys()) {
-            if (!this.isChecked(id)) {
-              items.delete(id)
-            }
-          }
-          this.props.onSelect([...items.values()])
-        }
-      }
-    )
-  }
-
-  isChecked(id: string) {
-    return this.state.selectedAssets.has(id)
-  }
-
-  renderItem({ item }: ListRenderItemInfo<Asset>): JSX.Element {
-    const imageSize = this.getImageSize()
-    const checked = this.isChecked(item.id)
-    return (
-      <ImageBox
-        uri={item.uri}
-        imageSize={imageSize}
-        checked={checked}
-        onSelect={(params) => this.select(item.id, params)}
-        checkedComponent={this.props.check ? this.props.check() : undefined}
-      ></ImageBox>
-    )
-  }
-
   render() {
     return (
       <FlatList
-        data={Array.from(this.state.assets.values())}
+        data={this.state.data}
+        renderItem={({ item }) => <ImageBox item={item} />}
         numColumns={this.getColumns()}
+        keyExtractor={(item) => item.asset.id}
         initialNumToRender={this.getItemsPerScreen()}
-        renderItem={this.renderItem.bind(this)}
-        keyExtractor={(item) => item.id}
+        maxToRenderPerBatch={this.getItemsPerScreen()}
         onEndReached={() => this.fetchNextPage(this.getItemsPerScreen())}
       />
     )
@@ -410,34 +379,58 @@ function DefaultAlbum(props: AlbumData) {
 function DefaultHeader(props: HeaderData) {
   return (
     <View style={styles.defaultHeaderContainer}>
-      {props.view == 'gallery' && !props.noAlbums && (
-        <TouchableOpacity
-          style={{ width: 30, height: 30 }}
-          onPress={props.goToAlbum}
-        >
-          <Svg viewBox='0 0 256 512' {...props}>
-            <Path
-              fill='black'
-              d='M192 448c-8.188 0-16.38-3.125-22.62-9.375l-160-160c-12.5-12.5-12.5-32.75 0-45.25l160-160c12.5-12.5 32.75-12.5 45.25 0s12.5 32.75 0 45.25L77.25 256l137.4 137.4c12.5 12.5 12.5 32.75 0 45.25C208.4 444.9 200.2 448 192 448z'
-            />
-          </Svg>
-        </TouchableOpacity>
+      {props.view == 'gallery' && (
+        <>
+          {!props.noAlbums && (
+            <TouchableOpacity
+              style={{ width: 30, height: 30 }}
+              onPress={props.goToAlbum}
+            >
+              <Svg viewBox='0 0 256 512' {...props}>
+                <Path
+                  fill='black'
+                  d='M192 448c-8.188 0-16.38-3.125-22.62-9.375l-160-160c-12.5-12.5-12.5-32.75 0-45.25l160-160c12.5-12.5 32.75-12.5 45.25 0s12.5 32.75 0 45.25L77.25 256l137.4 137.4c12.5 12.5 12.5 32.75 0 45.25C208.4 444.9 200.2 448 192 448z'
+                />
+              </Svg>
+            </TouchableOpacity>
+          )}
+          {props.imagesPicked == 0 && (
+            <>
+              {props.album && (
+                <Text style={{ fontSize: 20 }}>{props.album.title}</Text>
+              )}
+              {!props.album && props.multiple && (
+                <Text style={{ fontSize: 20 }}>Select the images</Text>
+              )}
+              {!props.album && !props.multiple && (
+                <Text style={{ fontSize: 20 }}>Select an image</Text>
+              )}
+            </>
+          )}
+          {props.imagesPicked > 0 && (
+            <>
+              {props.multiple && (
+                <Text style={{ fontSize: 20 }}>
+                  Selected {props.imagesPicked} images
+                </Text>
+              )}
+              {!props.multiple && (
+                <Text style={{ fontSize: 20 }}>Selected</Text>
+              )}
+              <Pressable
+                style={styles.defaultHeaderButton}
+                onPress={props.save}
+              >
+                <Text style={styles.defaultHeaderButtonText}>SAVE</Text>
+              </Pressable>
+            </>
+          )}
+        </>
       )}
-      {!props.picked && !props.album && (
-        <Text style={{ fontSize: 20 }}>Select an album</Text>
-      )}
-      {!props.picked && props.album && (
-        <Text style={{ fontSize: 20 }}>{props.album.title}</Text>
-      )}
-      {props.picked && (
-        <Text style={{ fontSize: 20 }}>
-          Selected {props.imagesPicked} images
-        </Text>
-      )}
-      {props.picked && (
-        <Pressable style={styles.defaultHeaderButton} onPress={props.save}>
-          <Text style={styles.defaultHeaderButtonText}>SAVE</Text>
-        </Pressable>
+      {props.view == 'album' && (
+        <>
+          <Text style={{ fontSize: 20 }}>Select an album</Text>
+        </>
       )}
     </View>
   )
@@ -446,156 +439,146 @@ function DefaultHeader(props: HeaderData) {
 export function ImagePicker(props: ImagePickerProps) {
   const [status, requestPermission] = MediaLibrary.usePermissions()
 
-  const [albumID, setAlbumID] = useState<string>()
+  const [albums, setAlbums] = useState<AlbumData[]>()
+  const [selectedAlbum, setSelectedAlbum] = useState<Album>()
+  const [selectedAssets, setSelectedAssets] = useState<Asset[]>([])
 
-  const [headerData, setHeaderData] = useState<HeaderData>({
-    view: props.noAlbums ? 'gallery' : 'album',
-    imagesPicked: 0,
-    multiple: props.multiple || false,
-    noAlbums: props.noAlbums || false,
-    picked: false,
-    goToAlbum,
-  })
-
-  const [albumData, setAlbumData] = useState<AlbumData[]>()
-
-  const [selected, setSelected] = useState<Asset[]>([])
-
-  const albumColumns = props.albumColumns || 2
+  async function askPermission() {
+    let cancel = false
+    try {
+      const permission = await requestPermission()
+      if (!permission.granted) cancel = true
+    } catch {
+      cancel = true
+    }
+    if (cancel && props.onCancel) {
+      props.onCancel()
+    }
+  }
 
   function goToAlbum() {
-    setHeaderData({ ...headerData, view: 'album' })
+    setSelectedAlbum(undefined)
+    setSelectedAssets([])
   }
 
-  function goToGallery(album: Album) {
-    const data = headerData
-    data.view = 'gallery'
-    if (album) {
-      data.album = album
-      setAlbumID(album.id)
-    }
-    setHeaderData(data)
-  }
-
-  async function loadAlbumData() {
-    const permissions = await MediaLibrary.getPermissionsAsync()
-    if (permissions.granted) {
-      const data = albumData || []
-      const albums = await MediaLibrary.getAlbumsAsync()
-      for (const album of albums) {
-        const thumb = await MediaLibrary.getAssetsAsync({
-          first: 1,
-          album,
-          sortBy: [[MediaLibrary.SortBy.creationTime, false]],
-        })
-        if (thumb.assets.length > 0) {
-          data.push({
-            album,
-            thumb: thumb.assets[0],
-            goToGallery,
-          })
-        }
-      }
-      setAlbumData(data)
-    }
-  }
-
-  function handleBack(): boolean {
-    if (headerData.view == 'album') {
-      if (props.onCancel) props.onCancel()
-    } else {
+  function handleBackPress() {
+    if (selectedAlbum) {
       goToAlbum()
+    } else if (props.onCancel) {
+      props.onCancel()
     }
-    return true
+    return false
   }
 
   useEffect(() => {
-    if (!status) {
-      requestPermission()
-        .then((res) => {
-          if (!res.granted && props.onCancel) props.onCancel()
-        })
-        .catch(props.onCancel)
-    }
-  }, [status])
-
-  useEffect(() => {
-    if (status) {
-      BackHandler.addEventListener('hardwareBackPress', handleBack)
-      return () => {
-        BackHandler.removeEventListener('hardwareBackPress', handleBack)
+    if (status && !status.granted) {
+      if (status.canAskAgain) {
+        askPermission()
+      } else if (props.onCancel) {
+        props.onCancel()
       }
     }
   }, [status])
 
   useEffect(() => {
-    if (!albumData || albumData.length == 0) loadAlbumData()
-  })
+    BackHandler.addEventListener('hardwareBackPress', handleBackPress)
+
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', handleBackPress)
+    }
+  }, [])
+
+  async function getAlbums() {
+    const data: AlbumData[] = []
+    const albums = await MediaLibrary.getAlbumsAsync({
+      includeSmartAlbums: true,
+    })
+    for (const album of albums) {
+      const page = await MediaLibrary.getAssetsAsync({
+        first: 1,
+        album,
+        sortBy: [MediaLibrary.SortBy.modificationTime],
+      })
+      if (page.assets.length > 0) {
+        data.push({
+          album,
+          thumb: page.assets[0],
+          goToGallery: (album) => {
+            setSelectedAlbum(album)
+          },
+        })
+      }
+    }
+    setAlbums(data)
+  }
 
   useEffect(() => {
-    if (selected.length == 0) {
-      setHeaderData({ ...headerData, imagesPicked: 0, picked: false })
-    } else {
-      setHeaderData({
-        ...headerData,
-        imagesPicked: selected.length,
-        picked: true,
-        save: () => {
-          if (props.onSave) props.onSave(selected)
-        },
-      })
+    if (status && status.granted && !albums) {
+      getAlbums()
     }
-  }, [selected])
+  }, [status])
 
   const Header = props.theme?.header ? props.theme.header : DefaultHeader
   const Album = props.theme?.album ? props.theme.album : DefaultAlbum
 
-  function renderAlbumItem({ item }: ListRenderItemInfo<AlbumData>) {
-    return <Album {...item} />
-  }
-
-  return (
-    <View style={styles.root}>
-      {headerData && (
+  if (props.noAlbums || selectedAlbum) {
+    return (
+      <View style={styles.root}>
         <View style={styles.rootHeader}>
-          <Header {...headerData} />
+          <Header
+            view='gallery'
+            imagesPicked={selectedAssets.length}
+            picked={selectedAssets.length > 0}
+            multiple={props.multiple || false}
+            noAlbums={props.noAlbums || false}
+            album={selectedAlbum}
+            goToAlbum={goToAlbum}
+          />
         </View>
-      )}
-      {headerData.view == 'album' && (
-        <>
-          {albumData && (
-            <FlatList
-              style={styles.rootBody}
-              data={albumData}
-              numColumns={albumColumns}
-              keyExtractor={(d) => d.album.id}
-              renderItem={renderAlbumItem}
-            />
-          )}
-          {!albumData && (
-            <View
-              style={{
-                ...styles.rootBody,
-                alignContent: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ActivityIndicator size={48} color='blue' />
-            </View>
-          )}
-        </>
-      )}
-      {headerData.view == 'gallery' && (
         <View style={styles.rootBody}>
           <ImagePickerCarousel
-            albumID={albumID}
-            onSelect={setSelected}
-            multiple={props.multiple}
-            columns={props.galleryColumns}
+            onSelect={setSelectedAssets}
+            albumID={selectedAlbum ? selectedAlbum.id : undefined}
+            multiple={props.multiple || false}
+            columns={props.galleryColumns || 2}
             check={props.theme?.check}
           />
         </View>
-      )}
-    </View>
-  )
+      </View>
+    )
+  } else {
+    return (
+      <View style={styles.root}>
+        <View style={styles.rootHeader}>
+          <Header
+            view='album'
+            imagesPicked={0}
+            multiple={props.multiple || false}
+            picked={false}
+            noAlbums={props.noAlbums || false}
+          />
+        </View>
+        {albums && (
+          <FlatList
+            style={styles.rootBody}
+            data={albums}
+            numColumns={props.albumColumns || 2}
+            keyExtractor={(d) => d.album.id}
+            renderItem={({ item }) => <Album {...item} />}
+          />
+        )}
+        {!albums && (
+          <View
+            style={{
+              ...styles.rootBody,
+              alignContent: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ActivityIndicator size={48} color='blue' />
+          </View>
+        )}
+      </View>
+    )
+  }
 }
