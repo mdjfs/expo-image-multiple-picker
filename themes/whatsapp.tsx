@@ -1,8 +1,9 @@
-import { AlbumData, HeaderData, ImagePicker } from 'expo-image-multiple-picker';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import EntypoIcon from 'react-native-vector-icons/Entypo';
 import FeatherIcon from 'react-native-vector-icons/Feather';
 import IonIcon from 'react-native-vector-icons/Ionicons';
+
+import { AlbumData, HeaderData, ImagePicker } from '../src';
 
 const WhatsAppHeader = (props: HeaderData) => {
   return (

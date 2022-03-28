@@ -99,7 +99,7 @@ The `galleryColumns` property will change the number of columns in the image vie
 
 The `albumColumns` property will change the number of columns in the album viewer
 
-Obviously, there is no selection limit, this is what the image selector looks like with 32 columns (and it works):
+Obviously, there is no selection limit, this is how the image selector looks like with 32 columns (and it works):
 
 ![Image](https://imgur.com/nURr9g2.png)
 
