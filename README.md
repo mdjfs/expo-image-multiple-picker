@@ -1,3 +1,24 @@
+# Expo Images Picker
+
+Fully customizable image picker for react native,
+to select one or multiple images
+
+![Image](https://imgur.com/lRkMQgk.png)
+
+## Installation
+
+Install with expo
+
+```bash
+  expo install expo-image-multiple-picker
+```
+
+or npm
+
+```bash
+  npm i expo-image-multiple-picker
+```
+
 ## Usage/Examples
 
 ```jsx
