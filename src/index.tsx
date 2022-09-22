@@ -18,6 +18,7 @@ export type Views = 'album' | 'gallery'
 export type Page = MediaLibrary.PagedInfo<MediaLibrary.Asset>
 export type Asset = MediaLibrary.Asset
 export type Album = MediaLibrary.Album
+export type AssetsOptions = MediaLibrary.AssetsOptions
 
 interface SelectedAsset {
   asset: Asset
@@ -300,12 +301,15 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   }
 
   async fetchNextPage(stack: number): Promise<boolean> {
-    const page = await MediaLibrary.getAssetsAsync({
+    const options: AssetsOptions = {
       album: this.props.albumID,
       first: stack,
       sortBy: [MediaLibrary.SortBy.modificationTime],
-      after: this.state.page ? this.state.page.endCursor : '0',
-    })
+    }
+    if (this.state.page) {
+      options.after = this.state.page.endCursor
+    }
+    const page = await MediaLibrary.getAssetsAsync(options)
     const isLastPage = page.endCursor == this.state.page?.endCursor
     if (!this._unmounted && !isLastPage) {
       this.state.page = page
