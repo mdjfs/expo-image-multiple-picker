@@ -1,5 +1,11 @@
-import * as MediaLibrary from 'expo-media-library';
-import React, { Component, PureComponent, useEffect, useState } from 'react';
+/* eslint-disable no-undef */
+/* eslint-disable no-void */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable eqeqeq */
+/* eslint-disable no-shadow */
+/* eslint-disable react-native/no-inline-styles */
+import * as MediaLibrary from 'expo-media-library'
+import React, { Component, PureComponent, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   BackHandler,
@@ -11,8 +17,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+} from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 
 export type Views = 'album' | 'gallery'
 export type Page = MediaLibrary.PagedInfo<MediaLibrary.Asset>
@@ -42,6 +48,7 @@ interface ImagePickerCarouselProps {
   onSelect?: (images: Asset[]) => void
   albumID?: string
   check?: () => JSX.Element
+  selected?: Asset[]
 }
 
 interface ImageBoxItem {
@@ -87,6 +94,9 @@ export interface ImagePickerProps {
   multiple?: boolean
   onSave?: (images: Asset[]) => void
   onCancel?: () => void
+  selected?: Asset[]
+  selectedAlbum?: Album
+  onSelectAlbum?: (album: Album | undefined) => void
 }
 
 const screen = Dimensions.get('window')
@@ -341,7 +351,25 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
       await this.fillStartImages()
   }
 
+  selectPropsImages() {
+    const assets = this.state.selectedAssets
+    for (const selected of this.props.selected ?? []) {
+      assets.set(selected.id, {
+        asset: selected,
+        uncheck: () => {
+          const assets = this.state.selectedAssets
+          assets.delete(selected.id)
+          this.setState({ selectedAssets: assets })
+        },
+      })
+    }
+    this.setState({ selectedAssets: assets })
+  }
+
   async componentDidMount() {
+    if (this.props.selected && this.props.selected.length > 0) {
+      this.selectPropsImages()
+    }
     if (this.state.data.length == 0) await this.fillStartImages()
   }
 
@@ -373,7 +401,7 @@ function DefaultAlbum(props: AlbumData) {
       <Image
         style={styles.defaultAlbumImage}
         source={{ uri: props.thumb.uri }}
-      ></Image>
+      />
       <Text style={{ padding: 10, fontSize: 16 }}>{props.album.title}</Text>
     </TouchableOpacity>
   )
@@ -443,8 +471,12 @@ export function ImagePicker(props: ImagePickerProps) {
   const [status, requestPermission] = MediaLibrary.usePermissions()
 
   const [albums, setAlbums] = useState<AlbumData[]>()
-  const [selectedAlbum, setSelectedAlbum] = useState<Album>()
-  const [selectedAssets, setSelectedAssets] = useState<Asset[]>([])
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | undefined>(
+    props.selectedAlbum
+  )
+  const [selectedAssets, setSelectedAssets] = useState<Asset[]>(
+    props.selected ?? []
+  )
 
   async function askPermission() {
     let cancel = false
@@ -491,6 +523,10 @@ export function ImagePicker(props: ImagePickerProps) {
     }
   }, [selectedAlbum])
 
+  useEffect(() => {
+    if (props.onSelectAlbum) props.onSelectAlbum(selectedAlbum)
+  }, [selectedAlbum])
+
   async function getAlbums() {
     const data: AlbumData[] = []
     const albums = await MediaLibrary.getAlbumsAsync({
@@ -522,7 +558,7 @@ export function ImagePicker(props: ImagePickerProps) {
   const Header = props.theme?.header ? props.theme.header : DefaultHeader
   const Album = props.theme?.album ? props.theme.album : DefaultAlbum
 
-  if (props.noAlbums || selectedAlbum) {
+  if (props.noAlbums || selectedAssets.length > 0 || selectedAlbum) {
     return (
       <View style={styles.root}>
         <View style={styles.rootHeader}>
@@ -544,6 +580,7 @@ export function ImagePicker(props: ImagePickerProps) {
             multiple={props.multiple || false}
             columns={props.galleryColumns || 2}
             check={props.theme?.check}
+            selected={selectedAssets}
           />
         </View>
       </View>

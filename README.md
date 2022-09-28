@@ -76,6 +76,89 @@ function App() {
 
 The `noAlbums` property will open the gallery without selecting album, showing all the images on the phone
 
+#### Common usage
+
+Usually, you want render the picker conditionally inside your logic, there is an example:
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  const [open, setOpen] = useState(false)
+
+  if (open) {
+    return (
+      <ImagePicker
+        onSave={(assets) => {
+          doWhatEverWithTheAssets(assets)
+          setOpen(false)
+        }}
+        onCancel={() => {
+          doWhatEverWhenYourUserSucks()
+          setOpen(false)
+        }}
+      />
+    )
+  }
+
+  return (
+    <View>
+      <Text>Hello Mars!</Text>
+    </View>
+  )
+}
+```
+
+_Important Note_
+
+React Native doesn't provide **fixed** containers. Then, obviously, ensure when you render the picker, is the
+unique element on the phone. For `stack screens` you will need the `headerShown: false`
+
+#### (Advanced) Track album and selected assets
+
+We can know and track the album and selected assets. And also call the picker which specific Album or
+selected assets. There is a common way to do that:
+
+```jsx
+import { ImagePicker, Album, Asset } from 'expo-image-multiple-picker'
+
+function App() {
+  const [open, setOpen] = useState(false)
+  const [album, setAlbum] = useState<Album | undefined>()
+  const [assets, setAssets] = useState<Asset[]>([])
+
+  if (open) {
+    return (
+      <ImagePicker
+        onSave={(assets) => {
+          setAssets(assets)
+          setOpen(false)
+        }}
+        onCancel={() => {
+          setAssets([])
+          setAlbum(undefined)
+          setOpen(false)
+        }}
+        onSelectAlbum={(album) => setAlbum(album)}
+        selected={assets}
+        selectedAlbum={album}
+      />
+    )
+  }
+
+  return (
+    <View>
+      <Text>Hello Pluto!</Text>
+    </View>
+  )
+}
+```
+
+_Important Note_
+
+React Native doesn't provide **fixed** containers. Then, obviously, ensure when you render the picker, is the
+unique element on the phone. For `stack screens` you will need the `headerShown: false`
+
 ## Customizing
 
 #### Change number of columns in the album or photo viewer
