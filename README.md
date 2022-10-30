@@ -76,6 +76,24 @@ function App() {
 
 The `noAlbums` property will open the gallery without selecting album, showing all the images on the phone
 
+#### Selection limit
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  return (
+    <ImagePicker
+      onSave={(assets) => console.log(assets)}
+      onCancel={() => console.log('no permissions or user go back')}
+      limit={5}
+    />
+  )
+}
+```
+
+The `limit` property will limit the number of images selected
+
 #### Common usage
 
 Usually, you want render the picker conditionally inside your logic, there is an example:

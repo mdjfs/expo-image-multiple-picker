@@ -49,12 +49,13 @@ interface ImagePickerCarouselProps {
   albumID?: string
   check?: () => JSX.Element
   selected?: Asset[]
+  max?: number
 }
 
 interface ImageBoxItem {
   asset: Asset
   size: Size
-  onCheck: (checked: boolean, asset: SelectedAsset) => void
+  onCheck: (checked: boolean, asset: SelectedAsset) => boolean
   isChecked: () => boolean
   check?: () => JSX.Element
 }
@@ -97,6 +98,7 @@ export interface ImagePickerProps {
   selected?: Asset[]
   selectedAlbum?: Album
   onSelectAlbum?: (album: Album | undefined) => void
+  limit?: number
 }
 
 const screen = Dimensions.get('window')
@@ -192,14 +194,14 @@ class ImageBox extends PureComponent<ImageBoxProps> {
   toggle() {
     const checked = !this.state.checked
 
-    this.setState({ checked })
-
-    this.props.item.onCheck(checked, {
+    const changed = this.props.item.onCheck(checked, {
       uncheck: () => {
         if (this._ismounted) this.setState({ checked: false })
       },
       asset: this.props.item.asset,
     })
+
+    if (changed) this.setState({ checked })
   }
 
   getCheckedComponent() {
@@ -281,6 +283,9 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   }
 
   selectedImage(checked: boolean, selected: SelectedAsset) {
+    if (this.props.max && this.state.selectedAssets.size >= this.props.max) {
+      return false
+    }
     if (!this.props.multiple) {
       for (const sel of this.state.selectedAssets.values()) {
         sel.uncheck()
@@ -300,6 +305,7 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
         [...this.state.selectedAssets.values()].map((s) => s.asset)
       )
     }
+    return true
   }
 
   exists(asset_id: string) {
@@ -581,6 +587,7 @@ export function ImagePicker(props: ImagePickerProps) {
             columns={props.galleryColumns || 2}
             check={props.theme?.check}
             selected={selectedAssets}
+            max={props.limit}
           />
         </View>
       </View>

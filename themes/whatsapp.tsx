@@ -1,9 +1,13 @@
-import { Image, Text, TouchableOpacity, View } from 'react-native';
-import EntypoIcon from 'react-native-vector-icons/Entypo';
-import FeatherIcon from 'react-native-vector-icons/Feather';
-import IonIcon from 'react-native-vector-icons/Ionicons';
+/* eslint-disable eqeqeq */
+/* eslint-disable react-native/no-inline-styles */
+/* eslint-disable prettier/prettier */
+import React from 'react'
+import { Image, Text, TouchableOpacity, View } from 'react-native'
+import EntypoIcon from 'react-native-vector-icons/Entypo'
+import FeatherIcon from 'react-native-vector-icons/Feather'
+import IonIcon from 'react-native-vector-icons/Ionicons'
 
-import { AlbumData, HeaderData, ImagePicker } from '../src';
+import { AlbumData, HeaderData, ImagePicker } from '../src'
 
 const WhatsAppHeader = (props: HeaderData) => {
   return (
@@ -52,7 +56,7 @@ const WhatsAppAlbum = (props: AlbumData) => {
       <Image
         source={{ uri: props.thumb.uri }}
         style={{ width: '100%', height: '100%' }}
-      ></Image>
+      />
       <View
         style={{
           position: 'absolute',
