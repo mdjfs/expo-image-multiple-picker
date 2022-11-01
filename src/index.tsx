@@ -283,7 +283,11 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   }
 
   selectedImage(checked: boolean, selected: SelectedAsset) {
-    if (this.props.max && this.state.selectedAssets.size >= this.props.max) {
+    if (
+      this.props.max &&
+      this.state.selectedAssets.size >= this.props.max &&
+      checked
+    ) {
       return false
     }
     if (!this.props.multiple) {
