@@ -10,13 +10,13 @@ to select one or multiple images
 Install with expo
 
 ```bash
-  expo install expo-image-multiple-picker
+  expo install expo-image-multiple-picker react-native-svg
 ```
 
 or npm
 
 ```bash
-  npm i expo-image-multiple-picker
+  npm i expo-image-multiple-picker react-native-svg
 ```
 
 ## Usage/Examples
