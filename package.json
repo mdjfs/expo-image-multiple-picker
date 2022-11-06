@@ -61,12 +61,12 @@
     "react-native-vector-icons": "^9.1.0"
   },
   "dependencies": {
-    "expo-media-library": "^14.0.1",
-    "react-native-svg": "^12.3.0"
+    "expo-media-library": "^14.0.1"
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-svg": "^12.3.0"
   },
   "jest": {
     "preset": "react-native",
