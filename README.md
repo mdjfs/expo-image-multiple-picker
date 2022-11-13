@@ -477,11 +477,12 @@ interface SliderBalloon extends SliderItem {
   quantity: number
 }
 
-interface SliderData {
+export interface SliderData {
   balloons: SliderBalloon[]
-  button: SliderItem | undefined
+  button?: SliderItem
   height: number
   isMoving: boolean
+  buttonProps?: ViewProps
 }
 ```
 

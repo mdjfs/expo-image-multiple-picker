@@ -114,9 +114,10 @@ interface SliderTimeTop {
 
 export interface SliderData {
   balloons: SliderBalloon[]
-  button: SliderItem | undefined
+  button?: SliderItem
   height: number
   isMoving: boolean
+  buttonProps?: ViewProps
 }
 
 export interface ScrollTimeData {
@@ -717,6 +718,7 @@ function ScrollTime({
         button={button}
         height={realHeight}
         isMoving={isMoving}
+        buttonProps={buttonProps}
       />
     )
   }
