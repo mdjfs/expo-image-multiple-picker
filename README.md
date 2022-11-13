@@ -3,6 +3,8 @@
 Fully customizable image picker for react native,
 to select one or multiple images
 
+> **Nice features for 4.7.0 version!** For more information look at the bottom
+
 ![Image](https://imgur.com/lRkMQgk.png)
 
 ## Installation
@@ -378,6 +380,113 @@ const WhatsAppCheck = () => {
   )
 }
 ```
+
+## 4.7.0 Features
+
+It had been a while without updating the library or touching react native code. But when i realized that the community
+really uses this library, with the downloads increasing, issues, feedback, pull request. Was amazing. I love that feedback.
+
+Then, after writing a lot of sweet things, there is the updates:
+
+### + Performance
+
+With the new version of expo-media-library (4.5.0) fetching assets is more faster! And with that, for every fetch, the picker
+can fetch until `70` images per time! x3.5 more than old version fetching 20 images per time... (Anyway, its more noticeable with a large number of galleryColumns)
+
+### Video Support
+
+Yes! We needed that from the start
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  return (
+    <ImagePicker
+      onSave={(assets) => console.log(assets)}
+      onCancel={() => console.log('no permissions or user go back')}
+      video
+    />
+  )
+}
+```
+
+The `video` property will make it possible to select videos in addition to images
+
+Also, the component rendered in a video asset is customizable.
+The `theme` property will receive `video` param. This param accept
+a function with an asset argument returning the JSX.Element
+
+### Time Slider
+
+Do you remember when you select an asset. Then you need uncheck that asset but hey.
+You don't remember where is it. Then you need search in the gallery where is it.
+
+Say GOODBYE to the old times. Now we have a **Time Slider**
+
+![Image](https://i.imgur.com/kPVJBVg.jpg)
+
+Similar to google photos time slider, but with a difference, shows the current assets picked and their position, to find them
+in an easy way
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  return (
+    <ImagePicker
+      onSave={(assets) => console.log(assets)}
+      onCancel={() => console.log('no permissions or user go back')}
+      timeSlider
+    />
+  )
+}
+```
+
+The `timeSlider` will enable the default time slider for the picker
+
+If you want use your own custom time slider, there is some tips:
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  return (
+    <ImagePicker
+      onSave={(assets) => console.log(assets)}
+      onCancel={() => console.log('no permissions or user go back')}
+      timeSlider
+      timeSliderHeight={500}
+    />
+  )
+}
+```
+
+The `timeSliderHeight` will adjust the height for the slider
+
+Build your own Custom Slider:
+
+```ts
+interface SliderItem {
+  date: Date
+  top: number
+  styles?: ViewStyle
+}
+
+interface SliderBalloon extends SliderItem {
+  quantity: number
+}
+
+interface SliderData {
+  balloons: SliderBalloon[]
+  button: SliderItem | undefined
+  height: number
+  isMoving: boolean
+}
+```
+
+The `theme` property will receive `slider` param. This param accept
+a function with an `SliderData` argument returning the JSX.Element
 
 ## Under the hood
 

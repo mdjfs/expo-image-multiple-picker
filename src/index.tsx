@@ -1,22 +1,32 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-native/no-inline-styles */
 /* eslint-disable no-undef */
 /* eslint-disable no-void */
-/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable eqeqeq */
 /* eslint-disable no-shadow */
-/* eslint-disable react-native/no-inline-styles */
 import * as MediaLibrary from 'expo-media-library'
-import React, { Component, PureComponent, useEffect, useState } from 'react'
+import React, {
+  Component,
+  PureComponent,
+  RefObject,
+  useEffect,
+  useState,
+} from 'react'
 import {
   ActivityIndicator,
   BackHandler,
   Dimensions,
   FlatList,
+  GestureResponderEvent,
   Image,
+  LayoutRectangle,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewProps,
+  ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
@@ -40,6 +50,7 @@ interface ImagePickerCarouselState {
   page?: Page
   selectedAssets: Map<string, SelectedAsset>
   data: ImageBoxItem[]
+  currentIndex: number
 }
 
 interface ImagePickerCarouselProps {
@@ -50,14 +61,20 @@ interface ImagePickerCarouselProps {
   check?: () => JSX.Element
   selected?: Asset[]
   max?: number
+  timeSlider?: boolean
+  timeSliderHeight?: number
+  slider?: (data: SliderData) => JSX.Element
+  video?: boolean
+  videoComponent?: (asset: Asset) => JSX.Element
 }
 
-interface ImageBoxItem {
+export interface ImageBoxItem {
   asset: Asset
   size: Size
   onCheck: (checked: boolean, asset: SelectedAsset) => boolean
   isChecked: () => boolean
   check?: () => JSX.Element
+  video?: (asset: Asset) => JSX.Element
 }
 
 interface ImageBoxProps {
@@ -81,10 +98,43 @@ export interface AlbumData {
   goToGallery: (album: Album) => void
 }
 
+export interface SliderItem {
+  date: Date
+  top: number
+  styles?: ViewStyle
+}
+
+export interface SliderBalloon extends SliderItem {
+  quantity: number
+}
+
+interface SliderTimeTop {
+  [day: string]: number
+}
+
+export interface SliderData {
+  balloons: SliderBalloon[]
+  button: SliderItem | undefined
+  height: number
+  isMoving: boolean
+}
+
+export interface ScrollTimeData {
+  selected: Map<string, SelectedAsset>
+  data: ImageBoxItem[]
+  flatList: RefObject<FlatList<ImageBoxItem>> | null
+  galleryColumns: number
+  currentIndex: number
+  height?: number
+  customSlider?: (data: SliderData) => JSX.Element
+}
+
 export interface ImagePickerTheme {
   header?: (props: HeaderData) => JSX.Element
   album?: (props: AlbumData) => JSX.Element
   check?: () => JSX.Element
+  slider?: (props: SliderData) => JSX.Element
+  video?: (asset: Asset) => JSX.Element
 }
 
 export interface ImagePickerProps {
@@ -99,6 +149,9 @@ export interface ImagePickerProps {
   selectedAlbum?: Album
   onSelectAlbum?: (album: Album | undefined) => void
   limit?: number
+  timeSlider?: boolean
+  timeSliderHeight?: number
+  video?: boolean
 }
 
 const screen = Dimensions.get('window')
@@ -133,6 +186,18 @@ const styles = StyleSheet.create({
     bottom: '20%',
     width: '30%',
     height: '30%',
+  },
+  defaultVideoBg: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  defaultVideoContainer: {
+    position: 'absolute',
+    left: '5%',
+    bottom: '5%',
+    width: '95%',
+    height: 'auto',
   },
   defaultAlbumContainer: {
     flex: 1,
@@ -173,6 +238,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 0.25,
     color: 'white',
+  },
+  defaultSliderContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    width: 50,
+    right: -20,
+    top: 30,
+  },
+  defaultSliderButton: {
+    height: 50,
+    width: 50,
+    backgroundColor: 'white',
+    borderRadius: 40,
+  },
+  defaultSliderBalloon: {
+    right: 30,
+    position: 'absolute',
+    minWidth: 25,
+    height: 25,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 40,
+    alignItems: 'center',
+  },
+  defaultSliderTime: {
+    position: 'absolute',
+    borderRadius: 10,
+    right: '105%',
+    backgroundColor: 'white',
+    padding: 10,
+    minWidth: 150,
+    alignItems: 'center',
+  },
+  defaultSlider: {
+    position: 'absolute',
+    top: 0,
+    height: '100%',
+    width: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 20,
   },
 })
 
@@ -221,6 +325,22 @@ class ImageBox extends PureComponent<ImageBoxProps> {
     )
   }
 
+  getVideoComponent() {
+    return this.props.item.video ? (
+      this.props.item.video(this.props.item.asset)
+    ) : (
+      <View style={styles.defaultVideoBg}>
+        <View style={styles.defaultVideoContainer}>
+          <Text style={{ fontSize: 6, color: 'white' }}>
+            {new Date(this.props.item.asset.duration * 1000)
+              .toISOString()
+              .slice(11, 19)}
+          </Text>
+        </View>
+      </View>
+    )
+  }
+
   render() {
     return (
       <TouchableOpacity
@@ -238,7 +358,9 @@ class ImageBox extends PureComponent<ImageBoxProps> {
           }}
           source={{ uri: this.props.item.asset.uri }}
         />
-
+        {!!this.props.item.asset.duration && (
+          <View style={styles.root}>{this.getVideoComponent()}</View>
+        )}
         <View
           style={{
             ...styles.root,
@@ -253,11 +375,14 @@ class ImageBox extends PureComponent<ImageBoxProps> {
 }
 
 export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
+  private flatListRef = React.createRef<FlatList<ImageBoxItem>>()
+
   _unmounted = false
 
   state: ImagePickerCarouselState = {
     selectedAssets: new Map(),
     data: [],
+    currentIndex: 0,
   }
 
   getColumns() {
@@ -302,7 +427,7 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
       this.state.selectedAssets.delete(selected.asset.id)
     }
     this.setState({
-      selectedAssets: this.state.selectedAssets,
+      selectedAssets: new Map(this.state.selectedAssets),
     })
     if (this.props.onSelect) {
       this.props.onSelect(
@@ -321,10 +446,13 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   }
 
   async fetchNextPage(stack: number): Promise<boolean> {
+    const types: MediaLibrary.MediaTypeValue[] = [MediaLibrary.MediaType.photo]
+    if (this.props.video) types.push(MediaLibrary.MediaType.video)
     const options: AssetsOptions = {
       album: this.props.albumID,
       first: stack,
       sortBy: [MediaLibrary.SortBy.modificationTime],
+      mediaType: types,
     }
     if (this.state.page) {
       options.after = this.state.page.endCursor
@@ -342,11 +470,12 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
             isChecked: this.isChecked.bind(this, asset.id),
             onCheck: this.selectedImage.bind(this),
             check: this.props.check,
+            video: this.props.videoComponent,
           })
         }
       }
       this.setState({
-        data: this.state.data,
+        data: [...this.state.data],
         page: this.state.page,
       })
       return true
@@ -356,7 +485,7 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
 
   async fillStartImages() {
     const needFetch = this.getItemsPerScreen()
-    const fetched = await this.fetchNextPage(needFetch < 20 ? needFetch : 20)
+    const fetched = await this.fetchNextPage(needFetch < 100 ? needFetch : 100)
     if (fetched && this.state.data.length < needFetch)
       await this.fillStartImages()
   }
@@ -369,11 +498,11 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
         uncheck: () => {
           const assets = this.state.selectedAssets
           assets.delete(selected.id)
-          this.setState({ selectedAssets: assets })
+          this.setState({ selectedAssets: new Map(assets) })
         },
       })
     }
-    this.setState({ selectedAssets: assets })
+    this.setState({ selectedAssets: new Map(assets) })
   }
 
   async componentDidMount() {
@@ -389,17 +518,265 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
 
   render() {
     return (
-      <FlatList
-        data={this.state.data}
-        renderItem={({ item }) => <ImageBox item={item} />}
-        numColumns={this.getColumns()}
-        keyExtractor={(item) => item.asset.id}
-        initialNumToRender={this.getItemsPerScreen()}
-        maxToRenderPerBatch={this.getItemsPerScreen()}
-        onEndReached={() => this.fetchNextPage(this.getItemsPerScreen())}
+      <>
+        <FlatList
+          data={this.state.data}
+          renderItem={({ item }) => <ImageBox item={item} />}
+          numColumns={this.getColumns()}
+          keyExtractor={(item) => item.asset.id}
+          initialNumToRender={this.getItemsPerScreen()}
+          maxToRenderPerBatch={this.getItemsPerScreen()}
+          onEndReached={() => this.fetchNextPage(this.getItemsPerScreen())}
+          onMoveShouldSetResponderCapture={() => false}
+          onStartShouldSetResponderCapture={() => false}
+          ref={this.flatListRef}
+          onScrollToIndexFailed={() => {}}
+          onScroll={(e) =>
+            this.setState({
+              currentIndex: Math.ceil(
+                e.nativeEvent.contentOffset.y / this.getImageSize().height
+              ),
+            })
+          }
+          showsVerticalScrollIndicator={!this.props.timeSlider}
+        />
+        {this.props.timeSlider && (
+          <ScrollTime
+            data={this.state.data}
+            flatList={this.flatListRef}
+            galleryColumns={this.getColumns()}
+            currentIndex={this.state.currentIndex}
+            selected={this.state.selectedAssets}
+            height={this.props.timeSliderHeight}
+            customSlider={this.props.slider}
+          />
+        )}
+      </>
+    )
+  }
+}
+
+function ScrollTime({
+  data,
+  flatList,
+  galleryColumns,
+  currentIndex,
+  height = screen.height - 200,
+  selected,
+  customSlider,
+}: ScrollTimeData) {
+  const [balloons, setBalloons] = useState<SliderBalloon[]>([])
+  const [button, setButton] = useState<SliderItem>()
+  const [topTimeRelation, setTopTimeRelation] = useState<SliderTimeTop>({})
+  const [isMoving, setIsMoving] = useState(false)
+  const [buttonProps, setButtonProps] = useState<ViewProps>()
+  const [buttonLayout, setButtonLayout] = useState<LayoutRectangle>()
+
+  const scrollTo = (index: number, animated = true) => {
+    flatList?.current?.scrollToIndex({
+      index,
+      animated,
+    })
+  }
+
+  const getDay = (date: number) => {
+    return new Date(date).toDateString()
+  }
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const days = [
+        ...new Set(data.map((s) => getDay(s.asset.modificationTime))),
+      ]
+      const relation: SliderTimeTop = {}
+      for (let i = 0; i < days.length; i++) {
+        const top = height * (i / (days.length - 1))
+        relation[days[i]] = top
+      }
+      setTopTimeRelation(relation)
+    } else setTopTimeRelation({})
+  }, [data, height])
+
+  useEffect(() => {
+    if (selected && selected.size > 0) {
+      const balls: { [top: number]: SliderBalloon } = {}
+      for (const item of selected.values()) {
+        const day = getDay(item.asset.modificationTime)
+        const top = topTimeRelation[day]
+        if (top) {
+          if (balls[top]) balls[top].quantity += 1
+          else {
+            balls[top] = {
+              top,
+              date: new Date(),
+              quantity: 1,
+              styles: {
+                top,
+                position: 'absolute',
+              },
+            }
+          }
+        }
+      }
+      setBalloons(Object.values(balls))
+    } else setBalloons([])
+  }, [selected, topTimeRelation])
+
+  useEffect(() => {
+    if (button && data && data.length > 0) {
+      const item = data[currentIndex * galleryColumns]
+      if (item) {
+        const day = getDay(item.asset.modificationTime)
+        const top = topTimeRelation[day]
+        if (button.styles) button.styles.top = top
+        button.top = top
+        button.date = new Date(day)
+        setButton({ ...button })
+      }
+    }
+  }, [currentIndex])
+
+  useEffect(() => {
+    if (!isMoving && button) {
+      const checked = data.findIndex(
+        (i) =>
+          getDay(i.asset.modificationTime) == getDay(button.date.getTime()) &&
+          i.isChecked()
+      )
+      const normal =
+        checked == -1 &&
+        data.findIndex(
+          (i) =>
+            getDay(i.asset.modificationTime) == getDay(button.date.getTime())
+        )
+      const index = checked == -1 ? normal : checked
+      if (typeof index == 'number' && index != -1) {
+        const scrollIndex = Math.ceil(index / galleryColumns)
+        scrollTo(scrollIndex == 0 ? 0 : scrollIndex - 1)
+      }
+    }
+  }, [isMoving])
+
+  const getClosestTop = (top: number) => {
+    return Object.entries(topTimeRelation).reduce(
+      ([prevDay, prevTop], [currDay, currTop]) => {
+        return Math.abs(currTop - top) < Math.abs(prevTop - top)
+          ? [currDay, currTop]
+          : [prevDay, prevTop]
+      }
+    )
+  }
+
+  const setSliderTop = (e: GestureResponderEvent) => {
+    if (e && button && isMoving && Object.keys(topTimeRelation).length > 0) {
+      const pageY = e.nativeEvent.pageY
+      e.currentTarget.measure((x, y, w, h, pX, pY) => {
+        const [day, top] = getClosestTop(pageY - (pY - button.top))
+        if (top != button.top) {
+          if (button.styles) button.styles.top = top
+          button.top = top
+          button.date = new Date(day)
+          setButton({ ...button })
+        }
+      })
+    }
+  }
+
+  useEffect(() => {
+    setButtonProps({
+      onResponderStart: () => setIsMoving(true),
+      onResponderEnd: () => setIsMoving(false),
+      onMoveShouldSetResponder: () => true,
+      onStartShouldSetResponder: () => true,
+      onResponderTerminationRequest: () => false,
+      onResponderMove: setSliderTop,
+      onLayout: (e) => setButtonLayout(e.nativeEvent.layout),
+    })
+  }, [isMoving, topTimeRelation, button])
+
+  useEffect(() => {
+    if (!button && data && data.length > 0) {
+      setButton({
+        top: 0,
+        date: new Date(data[0].asset.modificationTime),
+        styles: {
+          position: 'absolute',
+          top: 0,
+        },
+      })
+    }
+  }, [button, data])
+
+  const realHeight = height + (buttonLayout?.height ?? 0)
+
+  if (customSlider) {
+    const Slider = customSlider
+    return (
+      <Slider
+        balloons={balloons}
+        button={button}
+        height={realHeight}
+        isMoving={isMoving}
       />
     )
   }
+
+  return (
+    <View
+      style={{
+        ...styles.defaultSliderContainer,
+        height: realHeight,
+      }}
+    >
+      {button && (
+        <View
+          style={{
+            ...styles.defaultSliderButton,
+            opacity: isMoving ? 0.9 : 0.4,
+            ...button.styles,
+          }}
+          {...buttonProps}
+        >
+          {isMoving && (
+            <View style={styles.defaultSliderTime}>
+              <Text>{button.date.toDateString()}</Text>
+            </View>
+          )}
+          <Svg
+            viewBox='0 0 562.392 562.391'
+            fill={isMoving ? 'black' : 'white'}
+            width={40}
+            height={40}
+            style={{ left: 5, top: 5 }}
+          >
+            <Path d='M123.89,262.141h314.604c19.027,0,17.467-31.347,15.496-47.039c-0.605-4.841-3.636-11.971-6.438-15.967L303.965,16.533    c-12.577-22.044-32.968-22.044-45.551,0L114.845,199.111c-2.803,3.996-5.832,11.126-6.438,15.967    C106.43,230.776,104.863,262.141,123.89,262.141z' />
+            <Path d='M114.845,363.274l143.569,182.584c12.577,22.044,32.968,22.044,45.551,0l143.587-182.609    c2.804-3.996,5.826-11.119,6.438-15.967c1.971-15.691,3.531-47.038-15.496-47.038H123.89c-19.027,0-17.46,31.365-15.483,47.062    C109.019,352.147,112.042,359.277,114.845,363.274z' />
+          </Svg>
+        </View>
+      )}
+      <View
+        style={{
+          ...styles.defaultSlider,
+          opacity: isMoving ? 1 : 0,
+        }}
+        pointerEvents='none'
+      />
+      {isMoving &&
+        balloons &&
+        balloons.map(({ top, quantity, styles: balloonStyles }) => (
+          <View
+            key={top}
+            style={{
+              ...styles.defaultSliderBalloon,
+              ...balloonStyles,
+            }}
+            pointerEvents='none'
+          >
+            <Text style={{ color: 'white', fontSize: 17 }}>{quantity}</Text>
+          </View>
+        ))}
+    </View>
+  )
 }
 
 function DefaultAlbum(props: AlbumData) {
@@ -543,10 +920,15 @@ export function ImagePicker(props: ImagePickerProps) {
       includeSmartAlbums: true,
     })
     for (const album of albums) {
+      const types: MediaLibrary.MediaTypeValue[] = [
+        MediaLibrary.MediaType.photo,
+      ]
+      if (props.video) types.push(MediaLibrary.MediaType.video)
       const page = await MediaLibrary.getAssetsAsync({
         first: 1,
         album,
         sortBy: [MediaLibrary.SortBy.modificationTime],
+        mediaType: types,
       })
       if (page.assets.length > 0) {
         data.push({
@@ -592,6 +974,11 @@ export function ImagePicker(props: ImagePickerProps) {
             check={props.theme?.check}
             selected={selectedAssets}
             max={props.limit}
+            timeSlider={props.timeSlider}
+            timeSliderHeight={props.timeSliderHeight}
+            slider={props.theme?.slider}
+            video={props.video}
+            videoComponent={props.theme?.video}
           />
         </View>
       </View>

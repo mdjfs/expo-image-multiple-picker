@@ -1,6 +1,6 @@
 {
   "name": "expo-image-multiple-picker",
-  "version": "4.6.4",
+  "version": "4.7.0",
   "description": "Fully customizable image picker for react native",
   "homepage": "https://github.com/mdjfs/expo-image-multiple-picker#readme",
   "main": "lib/index.js",
@@ -48,7 +48,7 @@
     "@babel/runtime": "^7.16.7",
     "@react-native-community/eslint-config": "^3.0.1",
     "@types/jest": "^27.4.0",
-    "@types/react-native": "^0.66.15",
+    "@types/react-native": "^0.70.6",
     "@types/react-native-vector-icons": "^6.4.10",
     "@types/react-test-renderer": "^17.0.1",
     "babel-jest": "^27.4.6",
@@ -56,12 +56,12 @@
     "eslint-plugin-simple-import-sort": "^7.0.0",
     "jest": "^27.4.7",
     "metro-react-native-babel-preset": "^0.67.0",
+    "react-native-vector-icons": "^9.1.0",
     "react-test-renderer": "^17.0.2",
-    "typescript": "^4.5.5",
-    "react-native-vector-icons": "^9.1.0"
+    "typescript": "^4.5.5"
   },
   "dependencies": {
-    "expo-media-library": "^14.0.1"
+    "expo-media-library": "^15.0.0"
   },
   "peerDependencies": {
     "react": "*",
