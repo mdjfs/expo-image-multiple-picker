@@ -3,7 +3,7 @@
 Fully customizable image picker for react native,
 to select one or multiple images
 
-> **Nice features for 4.7.0 version!** For more information look at the bottom
+> **Nice features for 4.7.0 version!** More information at the bottom
 
 ![Image](https://imgur.com/lRkMQgk.png)
 
