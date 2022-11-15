@@ -1,6 +1,6 @@
 {
   "name": "expo-image-multiple-picker",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "description": "Fully customizable image picker for react native",
   "homepage": "https://github.com/mdjfs/expo-image-multiple-picker#readme",
   "main": "lib/index.js",
@@ -58,15 +58,14 @@
     "metro-react-native-babel-preset": "^0.67.0",
     "react-native-vector-icons": "^9.1.0",
     "react-test-renderer": "^17.0.2",
-    "typescript": "^4.5.5"
-  },
-  "dependencies": {
+    "typescript": "^4.5.5",
     "expo-media-library": "^15.0.0"
   },
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-svg": "*"
+    "react-native-svg": "*",
+    "expo-media-library": "*"
   },
   "jest": {
     "preset": "react-native",

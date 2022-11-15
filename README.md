@@ -12,13 +12,19 @@ to select one or multiple images
 Install with expo
 
 ```bash
-  expo install expo-image-multiple-picker react-native-svg
+  expo install expo-image-multiple-picker react-native-svg expo-media-library
 ```
 
 or npm
 
 ```bash
-  npm i expo-image-multiple-picker react-native-svg
+  npm i expo-image-multiple-picker react-native-svg expo-media-library
+```
+
+or yarn
+
+```bash
+  yarn add expo-image-multiple-picker react-native-svg expo-media-library
 ```
 
 ## Usage/Examples
@@ -390,8 +396,8 @@ Then, after writing a lot of sweet things, there is the updates:
 
 ### + Performance
 
-With the new version of expo-media-library (4.5.0) fetching assets is more faster! And with that, for every fetch, the picker
-can fetch until `70` images per time! x3.5 more than old version fetching 20 images per time... (Anyway, its more noticeable with a large number of galleryColumns)
+With the new version of expo-media-library (15.0.0) fetching assets is more faster! And with that, for every fetch, the picker
+can fetch until `70` images per time! x3.5 more than old version fetching 20 images per time... (Anyway, its more noticeable with a large number of galleryColumns) (use the last version of expo-media-library if you want this speed)
 
 ### Video Support
 
