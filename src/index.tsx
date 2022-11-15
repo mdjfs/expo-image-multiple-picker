@@ -591,7 +591,7 @@ function ScrollTime({
       ]
       const relation: SliderTimeTop = {}
       for (let i = 0; i < days.length; i++) {
-        const top = height * (i / (days.length - 1))
+        const top = height * (i / (days.length - 1 || 1))
         if (!isNaN(top)) {
           relation[days[i]] = top
         }
