@@ -606,7 +606,7 @@ function ScrollTime({
       for (const item of selected.values()) {
         const day = getDay(item.asset.modificationTime)
         const top = topTimeRelation[day]
-        if (top) {
+        if (top != undefined) {
           if (balls[top]) balls[top].quantity += 1
           else {
             balls[top] = {
