@@ -545,7 +545,7 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
           <ScrollTime
             data={this.state.data}
             flatList={this.flatListRef}
-            galleryColumns={this.getColumns()}
+            galleryColumns={this.props.columns}
             currentIndex={this.state.currentIndex}
             selected={this.state.selectedAssets}
             height={this.props.timeSliderHeight}
@@ -592,7 +592,9 @@ function ScrollTime({
       const relation: SliderTimeTop = {}
       for (let i = 0; i < days.length; i++) {
         const top = height * (i / (days.length - 1))
-        relation[days[i]] = top
+        if (top) {
+          relation[days[i]] = top
+        }
       }
       setTopTimeRelation(relation)
     } else setTopTimeRelation({})
