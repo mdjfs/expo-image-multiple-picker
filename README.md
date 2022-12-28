@@ -7,6 +7,9 @@ to select one or multiple images
 
 ![Image](https://imgur.com/lRkMQgk.png)
 
+## Demo
+[Expo Snack Demo](https://snack.expo.dev/@marvin_mmm/expo-image-multiple-picker-demo)
+
 ## Installation
 
 Install with expo
