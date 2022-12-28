@@ -430,7 +430,7 @@ You don't remember where is it. Then you need search in the gallery where is it.
 
 Say GOODBYE to the old times. Now we have a **Time Slider**
 
-![Image](https://i.imgur.com/kPVJBVg.jpg)
+![Image](https://imgur.com/6OjEvfb.jpg)
 
 Similar to google photos time slider, but with a difference, shows the current assets picked and their position, to find them
 in an easy way
