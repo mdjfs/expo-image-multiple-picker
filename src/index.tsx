@@ -65,6 +65,7 @@ interface ImagePickerCarouselProps {
   timeSliderHeight?: number
   slider?: (data: SliderData) => JSX.Element
   video?: boolean
+  image?: boolean
   videoComponent?: (asset: Asset) => JSX.Element
 }
 
@@ -153,6 +154,7 @@ export interface ImagePickerProps {
   timeSlider?: boolean
   timeSliderHeight?: number
   video?: boolean
+  image?: boolean
 }
 
 const screen = Dimensions.get('window')
@@ -447,7 +449,8 @@ export class ImagePickerCarousel extends Component<ImagePickerCarouselProps> {
   }
 
   async fetchNextPage(stack: number): Promise<boolean> {
-    const types: MediaLibrary.MediaTypeValue[] = [MediaLibrary.MediaType.photo]
+    const types: MediaLibrary.MediaTypeValue[] = []
+    if (this.props.image) types.push(MediaLibrary.MediaType.photo)
     if (this.props.video) types.push(MediaLibrary.MediaType.video)
     const options: AssetsOptions = {
       album: this.props.albumID,
@@ -924,9 +927,8 @@ export function ImagePicker(props: ImagePickerProps) {
       includeSmartAlbums: true,
     })
     for (const album of albums) {
-      const types: MediaLibrary.MediaTypeValue[] = [
-        MediaLibrary.MediaType.photo,
-      ]
+      const types: MediaLibrary.MediaTypeValue[] = []
+      if (props.image) types.push(MediaLibrary.MediaType.photo)
       if (props.video) types.push(MediaLibrary.MediaType.video)
       const page = await MediaLibrary.getAssetsAsync({
         first: 1,
@@ -983,6 +985,7 @@ export function ImagePicker(props: ImagePickerProps) {
             slider={props.theme?.slider}
             video={props.video}
             videoComponent={props.theme?.video}
+            image={props.image != undefined ? props.image : true}
           />
         </View>
       </View>

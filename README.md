@@ -8,6 +8,7 @@ to select one or multiple images
 ![Image](https://imgur.com/lRkMQgk.png)
 
 ## Demo
+
 [Expo Snack Demo](https://snack.expo.dev/@marvin_mmm/expo-image-multiple-picker-demo)
 
 ## Installation
@@ -425,6 +426,27 @@ The `video` property will make it possible to select videos in addition to image
 Also, the component rendered in a video asset is customizable.
 The `theme` property will receive `video` param. This param accept
 a function with an asset argument returning the JSX.Element
+
+### Only Select Videos
+
+Display an image picker just to select videos
+
+```jsx
+import { ImagePicker } from 'expo-image-multiple-picker'
+
+function App() {
+  return (
+    <ImagePicker
+      onSave={(assets) => console.log(assets)}
+      onCancel={() => console.log('no permissions or user go back')}
+      video
+      image={false}
+    />
+  )
+}
+```
+
+The `image` boolean property is true by default, just set the `video` property true and the `image` property false
 
 ### Time Slider
 
