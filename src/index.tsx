@@ -985,7 +985,7 @@ export function ImagePicker(props: ImagePickerProps) {
             slider={props.theme?.slider}
             video={props.video}
             videoComponent={props.theme?.video}
-            image={props.image != undefined ? props.image : true}
+            image={props.image === false ? props.image : true}
           />
         </View>
       </View>
