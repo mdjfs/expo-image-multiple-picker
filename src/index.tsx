@@ -921,6 +921,8 @@ export function ImagePicker(props: ImagePickerProps) {
     if (props.onSelectAlbum) props.onSelectAlbum(selectedAlbum)
   }, [selectedAlbum])
 
+  const noImages = props.image === false
+
   async function getAlbums() {
     const data: AlbumData[] = []
     const albums = await MediaLibrary.getAlbumsAsync({
@@ -928,7 +930,7 @@ export function ImagePicker(props: ImagePickerProps) {
     })
     for (const album of albums) {
       const types: MediaLibrary.MediaTypeValue[] = []
-      if (props.image) types.push(MediaLibrary.MediaType.photo)
+      if (!noImages) types.push(MediaLibrary.MediaType.photo)
       if (props.video) types.push(MediaLibrary.MediaType.video)
       const page = await MediaLibrary.getAssetsAsync({
         first: 1,
@@ -985,7 +987,7 @@ export function ImagePicker(props: ImagePickerProps) {
             slider={props.theme?.slider}
             video={props.video}
             videoComponent={props.theme?.video}
-            image={props.image === false ? props.image : true}
+            image={noImages ? false : true}
           />
         </View>
       </View>
